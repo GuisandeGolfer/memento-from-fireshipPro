@@ -1,95 +1,100 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+import { useState, useEffect } from "react";
+import shuffle from "./utilities/shuffle";
+import Header from "./components/Header";
+import Card from "./components/Card.jsx";
 
 export default function Home() {
+  const [cards, setCards] = useState(shuffle); // Cards array from assets
+  const [pickOne, setPickOne] = useState(null); // First selection
+  const [pickTwo, setPickTwo] = useState(null); // Second selection
+  const [disabled, setDisabled] = useState(false); // Delay handler
+  const [wins, setWins] = useState(0); // win streak
+
+  const handleClick = (card) => {
+    if (!disabled) {
+      // checking if pickOne has already been set
+      pickOne ? setPickTwo(card) : setPickOne(card);
+    }
+  };
+
+  const handleTurn = () => {
+    setPickOne(null);
+    setPickTwo(null);
+    setDisabled(false);
+  };
+
+  const handleNewGame = () => {
+    setWins(0);
+    handleTurn();
+    setCards(shuffle);
+  };
+
+  // used for match handling
+  useEffect(() => {
+    let pickTimer;
+
+    // checks if two cards have been picked
+    if (pickOne && pickTwo) {
+      // check if the cards are matching
+      if (pickOne.image === pickTwo.image) {
+        setCards((prevCards) => {
+          return prevCards.map((card) => {
+            if (card.image === pickOne.image) {
+              return { ...card, matched: true };
+            } else {
+              // there wasn't a match
+              return card;
+            }
+          });
+        });
+        handleTurn();
+      } else {
+        // Prevent new selections until after delay
+        setDisabled(true);
+
+        // delay between selections
+        pickTimer = setTimeout(() => {
+          handleTurn();
+        }, 1000);
+      }
+    }
+
+    return () => {
+      clearTimeout(pickTimer);
+    };
+  }, [cards, pickOne, pickTwo, wins]);
+
+  // if player found all matches
+  useEffect(() => {
+    const checkWin = cards.filter((card) => !card.matched);
+
+    if (cards.length && checkWin.length < 1) {
+      console.log("you win");
+      setWins(wins + 1);
+      handleTurn();
+      setCards(shuffle);
+    }
+  }, [cards, wins]);
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
+    <>
+      <Header handleNewGame={handleNewGame} wins={wins} />
+      <div className="grid">
+        {cards.map((card) => {
+          const { image, matched } = card;
+
+          return (
+            <Card
+              key={image.id}
+              image={image}
+              card={card}
+              selected={card === pickOne || card === pickTwo || matched}
+              onClick={() => handleClick(card)}
             />
-          </a>
-        </div>
+          );
+        })}
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    </>
+  );
 }
